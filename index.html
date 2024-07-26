@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastAPI Name Input Form</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f5f5;
+        }
+        .container {
+            text-align: center;
+            width: 350px;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+        .box {
+            border: 1px solid #ccc;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+        }
+        .heading {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+        .result {
+            font-size: 2em;
+            margin-top: 20px;
+        }
+        .confidence-container {
+            width: 100%;
+            height: 30px;
+            margin-top: 10px;
+            position: relative;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+        }
+        .confidence-bar {
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.3s;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .inputs-table {
+            margin: 10px auto;
+            border-collapse: collapse;
+        }
+        .inputs-table td {
+            text-align: left;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="box">
+            <h1 class="heading">Name Input Form</h1>
+            <form id="inputForm">
+                <label for="input1">Name 1:</label>
+                <input type="text" id="input1" name="input1" required style="width: 100%;">
+                <br><br>
+                <label for="input2">Name 2:</label>
+                <input type="text" id="input2" name="input2" required style="width: 100%;">
+                <br><br>
+                <button type="submit" style="width: 100%;">Submit</button>
+            </form>
+        </div>
+
+        <div class="box">
+            <h1 class="heading">Result</h1>
+            <table class="inputs-table">
+                <tr>
+                    <td>Name 1:</td>
+                    <td id="displayInput1"></td>
+                </tr>
+                <tr>
+                    <td>Name 2:</td>
+                    <td id="displayInput2"></td>
+                </tr>
+            </table>
+            <div id="resultBool" class="result"></div>
+            <label for="confidence">Confidence:</label>
+            <span id="confidencePercent"></span>
+            <div id="confidenceContainer" class="confidence-container">
+                <div id="confidenceBar" class="confidence-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('inputForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const input1 = document.getElementById('input1').value;
+            const input2 = document.getElementById('input2').value;
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/similar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ input1, input2 })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                const result = await response.json();
+
+                // Validate API response
+                if (typeof result.result.bool !== 'boolean' || typeof result.result.confidence !== 'number' || isNaN(result.result.confidence) || result.result.confidence < 0.5 || result.result.confidence > 1.0) {
+                    throw new Error('Invalid response from server');
+                }
+
+                document.getElementById('resultBool').textContent = result.result.bool ? 'True' : 'False';
+                
+                // Set custom progress bar width and color
+                const confidenceValue = result.result.confidence * 100;
+                const confidenceBar = document.getElementById('confidenceBar');
+                confidenceBar.style.width = `${confidenceValue}%`;
+                confidenceBar.style.backgroundColor = result.result.bool ? 'green' : 'red';
+                document.getElementById('confidencePercent').textContent = `${confidenceValue.toFixed(2)}%`;
+
+                document.getElementById('displayInput1').textContent = input1;
+                document.getElementById('displayInput2').textContent = input2;
+
+                // Clear input fields
+                document.getElementById('input1').value = '';
+                document.getElementById('input2').value = '';
+
+            } catch (error) {
+                console.error('Error:', error);
+                // Display error message to user if needed
+            }
+        });
+    </script>
+</body>
+</html>
